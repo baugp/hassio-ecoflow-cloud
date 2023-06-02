@@ -4,13 +4,15 @@ from ..mqtt.ecoflow_mqtt import EcoflowMQTTClient
 from ..number import ChargingPowerEntity, MaxBatteryLevelEntity, MinBatteryLevelEntity
 from ..select import DictSelectEntity, TimeoutDictSelectEntity
 from ..sensor import LevelSensorEntity, RemainSensorEntity, TempSensorEntity, \
-    CyclesSensorEntity, InWattsSensorEntity, OutWattsSensorEntity, VoltSensorEntity
+    CyclesSensorEntity, InWattsSensorEntity, OutWattsSensorEntity, VoltSensorEntity, \
+    VOLTSensorEntity, InVoltSensorEntity, OutVoltSensorEntity, InAmpSensorEntity, \
+    OutAmpSensorEntity
 from ..switch import EnabledEntity
 
 
 class River2(BaseDevice):
     def charging_power_step(self) -> int:
-        return 50
+        return 10
 
     def sensors(self, client: EcoflowMQTTClient) -> list[BaseSensorEntity]:
         return [
@@ -39,11 +41,19 @@ class River2(BaseDevice):
             TempSensorEntity(client, "bms_bmsStatus.minCellTemp", const.MIN_CELL_TEMP, False),
             TempSensorEntity(client, "bms_bmsStatus.maxCellTemp", const.MAX_CELL_TEMP, False),
 
-            VoltSensorEntity(client, "bms_bmsStatus.vol", const.BATTERY_VOLT, False),
+            VOLTSensorEntity(client, "bms_bmsStatus.vol", const.BATTERY_VOLT, False),
             VoltSensorEntity(client, "bms_bmsStatus.minCellVol", const.MIN_CELL_VOLT, False),
             VoltSensorEntity(client, "bms_bmsStatus.maxCellVol", const.MAX_CELL_VOLT, False),
 
             # FanSensorEntity(client, "bms_emsStatus.fanLevel", "Fan Level"),
+            
+            InVoltSensorEntity(client, "inv.acInVol", const.AC_IN_VOLT, False),
+            InAmpSensorEntity(client, "inv.acInAmp", const.AC_IN_AMP, False),
+            OutVoltSensorEntity(client, "inv.invOutVol", const.AC_OUT_VOLT, False),
+            OutAmpSensorEntity(client, "inv.invOutAmp", const.AC_OUT_AMP, False),
+            InVoltSensorEntity(client, "mppt.inVol", const.DC_IN_VOLT, False),
+            InAmpSensorEntity(client, "mppt.inAmp", const.DC_IN_AMP, False),
+            VoltSensorEntity(client, "mppt.outVol", const.MPPT_OUT_VOLT, False),
 
         ]
 

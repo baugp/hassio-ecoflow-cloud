@@ -70,6 +70,9 @@ class VoltSensorEntity(BaseSensorEntity):
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_value = 0
 
+class VOLTSensorEntity(VoltSensorEntity):
+    _attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
+
 class AmpSensorEntity(BaseSensorEntity):
     _attr_device_class = SensorDeviceClass.CURRENT
     _attr_entity_category = EntityCategory.DIAGNOSTIC
@@ -94,5 +97,11 @@ class OutWattsSensorEntity(WattsSensorEntity):
 class InVoltSensorEntity(VoltSensorEntity):
     _attr_icon = "mdi:transmission-tower-import"
 
+class OutVoltSensorEntity(VoltSensorEntity):
+    _attr_icon = "mdi:transmission-tower-export"
+
 class InAmpSensorEntity(AmpSensorEntity):
     _attr_icon = "mdi:transmission-tower-import"
+
+class OutAmpSensorEntity(AmpSensorEntity):
+    _attr_icon = "mdi:transmission-tower-export"
