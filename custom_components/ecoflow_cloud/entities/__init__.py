@@ -1,4 +1,5 @@
-from typing import Any, Callable
+import inspect
+from typing import Any, Callable, Optional
 
 from homeassistant.components.number import NumberEntity
 from homeassistant.components.select import SelectEntity
@@ -9,25 +10,42 @@ from homeassistant.helpers.entity import Entity, EntityCategory
 from ..mqtt.ecoflow_mqtt import EcoflowMQTTClient
 
 
-class EcoFlowBaseEntity(Entity):
+class EcoFlowAbstractEntity(Entity):
     _attr_has_entity_name = True
     _attr_should_poll = False
 
+    def __init__(self, client: EcoflowMQTTClient, title: str, key: str) -> object:
+        self._client = client
+        self._attr_name = title
+        self._attr_device_info = client.device_info_main
+        self._attr_unique_id = 'ecoflow-' + client.device_sn + '-' + key.replace('.', '-').replace('_', '-')
+
+    def send_get_message(self, command: dict):
+        self._client.send_get_message(command)
+
+    def send_set_message(self, target_dict: dict[str, Any] | None, command: dict):
+        self._client.send_set_message(target_dict, command)
+
+
+class EcoFlowDictEntity(EcoFlowAbstractEntity):
+
     def __init__(self, client: EcoflowMQTTClient, mqtt_key: str, title: str, enabled: bool = True,
                  auto_enable: bool = False) -> object:
-        # self._attr_available = False
-        self._client = client
+        super().__init__(client, title, mqtt_key)
         self._mqtt_key = mqtt_key
         self._auto_enable = auto_enable
-
-        self._attr_name = title
         self._attr_entity_registry_enabled_default = enabled
-        self._attr_device_info = client.device_info_main
-        self._attr_unique_id = 'ecoflow-' + client.device_sn + '-' + mqtt_key.replace('.', '-').replace('_', '-')
 
     @property
     def mqtt_key(self):
         return self._mqtt_key
+
+    @property
+    def auto_enable(self):
+        return self._auto_enable
+
+    def send_set_message(self, target_value: Any, command: dict):
+        super().send_set_message({self._mqtt_key: target_value}, command)
 
     @property
     def enabled_default(self):
@@ -35,10 +53,10 @@ class EcoFlowBaseEntity(Entity):
 
     async def async_added_to_hass(self):
         await super().async_added_to_hass()
-        d = self._client.data.observable().subscribe(self.__updated)
+        d = self._client.data.params_observable().subscribe(self._updated)
         self.async_on_remove(d.dispose)
 
-    def __updated(self, data: dict[str, Any]):
+    def _updated(self, data: dict[str, Any]):
         if self._mqtt_key in data:
             self._attr_available = True
             if self._auto_enable:
@@ -50,19 +68,21 @@ class EcoFlowBaseEntity(Entity):
     def _update_value(self, val: Any) -> bool:
         return False
 
-    def send_message(self, target_value: Any, command: dict):
-        self._client.send_message({self._mqtt_key: target_value}, command)
 
-
-class EcoFlowBaseCommandEntity(EcoFlowBaseEntity):
+class EcoFlowBaseCommandEntity(EcoFlowDictEntity):
     def __init__(self, client: EcoflowMQTTClient, mqtt_key: str, title: str,
-                 command: Callable[[int], dict[str, any]] | None, enabled: bool = True, auto_enable: bool = False):
+                 command: Callable[[int, Optional[dict[str, Any]]], dict[str, Any]] | None,
+                 enabled: bool = True, auto_enable: bool = False):
         super().__init__(client, mqtt_key, title, enabled, auto_enable)
         self._command = command
 
     def command_dict(self, value: int) -> dict[str, any] | None:
         if self._command:
-            return self._command(value)
+            p_count = len(inspect.signature(self._command).parameters)
+            if p_count == 1:
+                return self._command(value)
+            elif p_count == 2:
+                return self._command(value, self._client.data.params)
         else:
             return None
 
@@ -85,7 +105,7 @@ class BaseNumberEntity(NumberEntity, EcoFlowBaseCommandEntity):
             return False
 
 
-class BaseSensorEntity(SensorEntity, EcoFlowBaseEntity):
+class BaseSensorEntity(SensorEntity, EcoFlowDictEntity):
 
     def _update_value(self, val: Any) -> bool:
         if self._attr_native_value != val:

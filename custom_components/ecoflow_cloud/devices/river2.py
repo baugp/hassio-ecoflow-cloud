@@ -4,7 +4,7 @@ from ..mqtt.ecoflow_mqtt import EcoflowMQTTClient
 from ..number import ChargingPowerEntity, MaxBatteryLevelEntity, MinBatteryLevelEntity
 from ..select import DictSelectEntity, TimeoutDictSelectEntity
 from ..sensor import LevelSensorEntity, RemainSensorEntity, TempSensorEntity, \
-    CyclesSensorEntity, InWattsSensorEntity, OutWattsSensorEntity, VoltSensorEntity, \
+    CyclesSensorEntity, InWattsSensorEntity, OutWattsSensorEntity, VoltSensorEntity, StatusSensorEntity, \
     VOLTSensorEntity, InVoltSensorEntity, OutVoltSensorEntity, InAmpSensorEntity, \
     OutAmpSensorEntity
 from ..switch import EnabledEntity
@@ -46,6 +46,7 @@ class River2(BaseDevice):
             VoltSensorEntity(client, "bms_bmsStatus.maxCellVol", const.MAX_CELL_VOLT, False),
 
             # FanSensorEntity(client, "bms_emsStatus.fanLevel", "Fan Level"),
+            StatusSensorEntity(client),
             
             InVoltSensorEntity(client, "inv.acInVol", const.AC_IN_VOLT, False),
             InAmpSensorEntity(client, "inv.acInAmp", const.AC_IN_AMP, False),

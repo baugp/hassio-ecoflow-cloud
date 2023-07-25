@@ -2,10 +2,10 @@ from . import const, BaseDevice
 from .. import EcoflowMQTTClient
 from ..entities import BaseSensorEntity, BaseNumberEntity, BaseSwitchEntity, BaseSelectEntity
 from ..number import ChargingPowerEntity, MinBatteryLevelEntity, MaxBatteryLevelEntity, \
-    MaxGenStopLevelEntity, MinGenStartLevelEntity
+    MaxGenStopLevelEntity, MinGenStartLevelEntity, BatteryBackupLevel
 from ..select import DictSelectEntity, TimeoutDictSelectEntity
 from ..sensor import LevelSensorEntity, RemainSensorEntity, TempSensorEntity, CyclesSensorEntity, \
-    InWattsSensorEntity, OutWattsSensorEntity, VoltSensorEntity
+    InWattsSensorEntity, OutWattsSensorEntity, VoltSensorEntity, QuotasStatusSensorEntity
 from ..switch import BeeperEntity, EnabledEntity
 
 
@@ -61,7 +61,8 @@ class Delta2(BaseDevice):
 
             CyclesSensorEntity(client, "bms_slave.cycles", const.SLAVE_CYCLES, False, True),
             InWattsSensorEntity(client, "bms_slave.inputWatts", const.SLAVE_IN_POWER, False, True),
-            OutWattsSensorEntity(client, "bms_slave.outputWatts", const.SLAVE_OUT_POWER, False, True)
+            OutWattsSensorEntity(client, "bms_slave.outputWatts", const.SLAVE_OUT_POWER, False, True),
+            QuotasStatusSensorEntity(client),
 
         ]
 
@@ -74,6 +75,12 @@ class Delta2(BaseDevice):
             MinBatteryLevelEntity(client, "bms_emsStatus.minDsgSoc", const.MIN_DISCHARGE_LEVEL, 0, 30,
                                   lambda value: {"moduleType": 2, "operateType": "dsgCfg",
                                                  "params": {"minDsgSoc": int(value)}}),
+
+            BatteryBackupLevel(client, "pd.bpPowerSoc", const.BACKUP_RESERVE_LEVEL, 5, 100,
+                               "bms_emsStatus.minDsgSoc", "bms_emsStatus.maxChargeSoc",
+                               lambda value: {"moduleType": 1, "operateType": "watthConfig",
+                                              "params": {"isConfig": 1, "bpPowerSoc": int(value), "minDsgSoc": 0,
+                                                         "minChgSoc": 0}}),
 
             MinGenStartLevelEntity(client, "bms_emsStatus.minOpenOilEb", const.GEN_AUTO_START_LEVEL, 0, 30,
                                    lambda value: {"moduleType": 2, "operateType": "closeOilSoc",
@@ -97,11 +104,18 @@ class Delta2(BaseDevice):
             EnabledEntity(client, "pd.dcOutState", const.USB_ENABLED,
                           lambda value: {"moduleType": 1, "operateType": "dcOutCfg", "params": {"enabled": value}}),
 
-            EnabledEntity(client, "pd.acAutoOnCfg", const.AC_ALWAYS_ENABLED,
-                          lambda value: {"moduleType": 1, "operateType": "acAutoOn", "params": {"cfg": value}}),
+            # EnabledEntity(client, "pd.acAutoOnCfg", const.AC_ALWAYS_ENABLED,
+            #               lambda value: {"moduleType": 1, "operateType": "acAutoOn", "params": {"cfg": value}}),
+
+            EnabledEntity(client, "pd.acAutoOutConfig", const.AC_ALWAYS_ENABLED,
+                          lambda value, params: {"moduleType": 1, "operateType": "acAutoOutConfig",
+                                                 "params": {"acAutoOutConfig": value,
+                                                            "minAcOutSoc": int(params["bms_emsStatus.minDsgSoc"]) + 5}}
+                          ),
 
             EnabledEntity(client, "pd.pvChgPrioSet", const.PV_PRIO,
-                          lambda value: {"moduleType": 1, "operateType": "pvChangePrio", "params": {"pvChangeSet": value}}),
+                          lambda value: {"moduleType": 1, "operateType": "pvChangePrio",
+                                         "params": {"pvChangeSet": value}}),
 
             EnabledEntity(client, "mppt.cfgAcEnabled", const.AC_ENABLED,
                           lambda value: {"moduleType": 5, "operateType": "acOutCfg",
@@ -116,6 +130,8 @@ class Delta2(BaseDevice):
             EnabledEntity(client, "pd.carState", const.DC_ENABLED,
                           lambda value: {"moduleType": 5, "operateType": "mpptCar", "params": {"enabled": value}}),
 
+            EnabledEntity(client, "pd.bpPowerSoc", const.BP_ENABLED,
+                          lambda value: {"moduleType": 1, "operateType": "watthConfig", "params": {"isConfig": value}}),
         ]
 
     def selects(self, client: EcoflowMQTTClient) -> list[BaseSelectEntity]:
