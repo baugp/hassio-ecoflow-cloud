@@ -1,26 +1,36 @@
 from . import const, BaseDevice
+from .const import ATTR_DESIGN_CAPACITY, ATTR_FULL_CAPACITY, ATTR_REMAIN_CAPACITY
 from .. import EcoflowMQTTClient
 from ..entities import BaseSensorEntity, BaseNumberEntity, BaseSwitchEntity, BaseSelectEntity
 from ..number import ChargingPowerEntity, MinBatteryLevelEntity, MaxBatteryLevelEntity, \
     MaxGenStopLevelEntity, MinGenStartLevelEntity, BatteryBackupLevel
 from ..select import DictSelectEntity, TimeoutDictSelectEntity
 from ..sensor import LevelSensorEntity, RemainSensorEntity, TempSensorEntity, CyclesSensorEntity, \
-    InWattsSensorEntity, OutWattsSensorEntity, VoltSensorEntity, QuotasStatusSensorEntity
+    InWattsSensorEntity, OutWattsSensorEntity, QuotasStatusSensorEntity, MilliVoltSensorEntity, InMilliVoltSensorEntity, \
+    OutMilliVoltSensorEntity
 from ..switch import BeeperEntity, EnabledEntity
 
 
 class Delta2(BaseDevice):
     def sensors(self, client: EcoflowMQTTClient) -> list[BaseSensorEntity]:
         return [
-            LevelSensorEntity(client, "pd.soc", const.MAIN_BATTERY_LEVEL),
+            LevelSensorEntity(client, "pd.soc", const.MAIN_BATTERY_LEVEL)
+                .attr("bms_bmsStatus.designCap", ATTR_DESIGN_CAPACITY, 0)
+                .attr("bms_bmsStatus.fullCap", ATTR_FULL_CAPACITY, 0)
+                .attr("bms_bmsStatus.remainCap", ATTR_REMAIN_CAPACITY, 0),
             LevelSensorEntity(client, "bms_emsStatus.lcdShowSoc", const.COMBINED_BATTERY_LEVEL),
             InWattsSensorEntity(client, "pd.wattsInSum", const.TOTAL_IN_POWER),
             OutWattsSensorEntity(client, "pd.wattsOutSum", const.TOTAL_OUT_POWER),
 
             InWattsSensorEntity(client, "inv.inputWatts", const.AC_IN_POWER),
+            OutWattsSensorEntity(client, "inv.outputWatts", const.AC_OUT_POWER),
+
+            InMilliVoltSensorEntity(client, "inv.acInVol", const.AC_IN_VOLT),
+            OutMilliVoltSensorEntity(client, "inv.invOutVol", const.AC_OUT_VOLT),
+
             InWattsSensorEntity(client, "mppt.inWatts", const.SOLAR_IN_POWER),
 
-            OutWattsSensorEntity(client, "inv.outputWatts", const.AC_OUT_POWER),
+
 
             # OutWattsSensorEntity(client, "pd.carWatts", const.DC_OUT_POWER),
             # the same value as pd.carWatts
@@ -45,19 +55,22 @@ class Delta2(BaseDevice):
             TempSensorEntity(client, "bms_bmsStatus.minCellTemp", const.MIN_CELL_TEMP, False),
             TempSensorEntity(client, "bms_bmsStatus.maxCellTemp", const.MAX_CELL_TEMP, False),
 
-            VoltSensorEntity(client, "bms_bmsStatus.vol", const.BATTERY_VOLT, False),
-            VoltSensorEntity(client, "bms_bmsStatus.minCellVol", const.MIN_CELL_VOLT, False),
-            VoltSensorEntity(client, "bms_bmsStatus.maxCellVol", const.MAX_CELL_VOLT, False),
+            MilliVoltSensorEntity(client, "bms_bmsStatus.vol", const.BATTERY_VOLT, False),
+            MilliVoltSensorEntity(client, "bms_bmsStatus.minCellVol", const.MIN_CELL_VOLT, False),
+            MilliVoltSensorEntity(client, "bms_bmsStatus.maxCellVol", const.MAX_CELL_VOLT, False),
 
             # Optional Slave Battery
-            LevelSensorEntity(client, "bms_slave.soc", const.SLAVE_BATTERY_LEVEL, False, True),
+            LevelSensorEntity(client, "bms_slave.soc", const.SLAVE_BATTERY_LEVEL, False, True)
+                .attr("bms_slave.designCap", ATTR_DESIGN_CAPACITY, 0)
+                .attr("bms_slave.fullCap", ATTR_FULL_CAPACITY, 0)
+                .attr("bms_slave.remainCap", ATTR_REMAIN_CAPACITY, 0),
             TempSensorEntity(client, "bms_slave.temp", const.SLAVE_BATTERY_TEMP, False, True),
             TempSensorEntity(client, "bms_slave.minCellTemp", const.SLAVE_MIN_CELL_TEMP, False),
             TempSensorEntity(client, "bms_slave.maxCellTemp", const.SLAVE_MAX_CELL_TEMP, False),
 
-            VoltSensorEntity(client, "bms_slave.vol", const.SLAVE_BATTERY_VOLT, False),
-            VoltSensorEntity(client, "bms_slave.minCellVol", const.SLAVE_MIN_CELL_VOLT, False),
-            VoltSensorEntity(client, "bms_slave.maxCellVol", const.SLAVE_MAX_CELL_VOLT, False),
+            MilliVoltSensorEntity(client, "bms_slave.vol", const.SLAVE_BATTERY_VOLT, False),
+            MilliVoltSensorEntity(client, "bms_slave.minCellVol", const.SLAVE_MIN_CELL_VOLT, False),
+            MilliVoltSensorEntity(client, "bms_slave.maxCellVol", const.SLAVE_MAX_CELL_VOLT, False),
 
             CyclesSensorEntity(client, "bms_slave.cycles", const.SLAVE_CYCLES, False, True),
             InWattsSensorEntity(client, "bms_slave.inputWatts", const.SLAVE_IN_POWER, False, True),
@@ -110,7 +123,7 @@ class Delta2(BaseDevice):
             EnabledEntity(client, "pd.acAutoOutConfig", const.AC_ALWAYS_ENABLED,
                           lambda value, params: {"moduleType": 1, "operateType": "acAutoOutConfig",
                                                  "params": {"acAutoOutConfig": value,
-                                                            "minAcOutSoc": int(params["bms_emsStatus.minDsgSoc"]) + 5}}
+                                                            "minAcOutSoc": int(params.get("bms_emsStatus.minDsgSoc", 0)) + 5}}
                           ),
 
             EnabledEntity(client, "pd.pvChgPrioSet", const.PV_PRIO,

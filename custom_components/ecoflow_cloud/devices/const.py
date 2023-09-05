@@ -69,11 +69,19 @@ DC_CHARGE_CURRENT_OPTIONS = {
 }
 
 COMBINED_BATTERY_LEVEL = "Battery Level"
+BATTERY_CHARGING_STATE = "Battery Charging State"
+
+ATTR_DESIGN_CAPACITY = "Design Capacity (mAh)"
+ATTR_FULL_CAPACITY = "Full Capacity (mAh)"
+ATTR_REMAIN_CAPACITY = "Remain Capacity (mAh)"
 
 MAIN_BATTERY_LEVEL = "Main Battery Level"
 TOTAL_IN_POWER = "Total In Power"
 SOLAR_IN_POWER = "Solar In Power"
 AC_IN_POWER = "AC In Power"
+AC_IN_VOLT = "AC In Volts"
+AC_OUT_VOLT = "AC Out Volts"
+
 TYPE_C_IN_POWER = "Type-C In Power"
 SOLAR_IN_CURRENT = "Solar In Current"
 SOLAR_IN_VOLTAGE = "Solar In Voltage"
@@ -158,17 +166,20 @@ DC_MODE = "DC Mode"
 BATTERY_TEMP = "Battery Temperature"
 MIN_CELL_TEMP = "Min Cell Temperature"
 MAX_CELL_TEMP = "Max Cell Temperature"
+ATTR_MIN_CELL_TEMP = MIN_CELL_TEMP
+ATTR_MAX_CELL_TEMP = MAX_CELL_TEMP
+
 
 BATTERY_VOLT = "Battery Volts"
 MIN_CELL_VOLT = "Min Cell Volts"
 MAX_CELL_VOLT = "Max Cell Volts"
+ATTR_MIN_CELL_VOLT = MIN_CELL_VOLT
+ATTR_MAX_CELL_VOLT = MAX_CELL_VOLT
 
 BATTERY_AMP = "Battery Current"
 SLAVE_BATTERY_AMP = "Slave Battery Current"
 
-AC_IN_VOLT = "AC In Volts"
 AC_IN_AMP = "AC In Amps"
-AC_OUT_VOLT = "AC Out Volts"
 AC_OUT_AMP = "AC Out Amps"
 DC_IN_VOLT = "DC In Volts"
 DC_IN_AMP = "DC In Amps"

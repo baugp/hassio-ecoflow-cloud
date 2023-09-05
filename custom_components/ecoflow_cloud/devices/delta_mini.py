@@ -13,7 +13,7 @@ from ..sensor import LevelSensorEntity, WattsSensorEntity, RemainSensorEntity, T
 from ..switch import BeeperEntity, EnabledEntity
 
 
-class DeltaPro(BaseDevice):
+class DeltaMini(BaseDevice):
     def sensors(self, client: EcoflowMQTTClient) -> list[BaseSensorEntity]:
         return [
             LevelSensorEntity(client, "pd.soc", const.MAIN_BATTERY_LEVEL)
@@ -50,13 +50,13 @@ class DeltaPro(BaseDevice):
             RemainSensorEntity(client, "ems.dsgRemainTime", const.DISCHARGE_REMAINING_TIME),
             CyclesSensorEntity(client, "bmsMaster.cycles", const.CYCLES),
 
-            TempSensorEntity(client, "bmsMaster.temp", const.BATTERY_TEMP),
-            TempSensorEntity(client, "bmsMaster.minCellTemp", const.MIN_CELL_TEMP, False),
-            TempSensorEntity(client, "bmsMaster.maxCellTemp", const.MAX_CELL_TEMP, False),
+            TempSensorEntity(client, "bmsMaster.temp", const.BATTERY_TEMP, False)
+                .attr("bmsMaster.minCellTemp", const.ATTR_MIN_CELL_TEMP, 0)
+                .attr("bmsMaster.maxCellTemp", const.ATTR_MAX_CELL_TEMP, 0),
 
-            MilliVoltSensorEntity(client, "bmsMaster.vol", const.BATTERY_VOLT, False),
-            MilliVoltSensorEntity(client, "bmsMaster.minCellVol", const.MIN_CELL_VOLT, False),
-            MilliVoltSensorEntity(client, "bmsMaster.maxCellVol", const.MAX_CELL_VOLT, False),
+            MilliVoltSensorEntity(client, "bmsMaster.vol", const.BATTERY_VOLT, False)
+                .attr("bmsMaster.minCellVol", const.ATTR_MIN_CELL_VOLT, 0)
+                .attr("bmsMaster.maxCellVol", const.ATTR_MAX_CELL_VOLT, 0),
 
             # https://github.com/tolwi/hassio-ecoflow-cloud/discussions/87
             InEnergySensorEntity(client, "pd.chgSunPower", const.SOLAR_IN_ENERGY),
@@ -65,23 +65,6 @@ class DeltaPro(BaseDevice):
             OutEnergySensorEntity(client, "pd.dsgPowerAc", const.DISCHARGE_AC_ENERGY),
             OutEnergySensorEntity(client, "pd.dsgPowerDc", const.DISCHARGE_DC_ENERGY),
 
-            # Optional Slave Batteries
-            LevelSensorEntity(client, "bmsSlave1.soc", const.SLAVE_1_BATTERY_LEVEL, False, True)
-                .attr("bmsSlave1.designCap", ATTR_DESIGN_CAPACITY, 0)
-                .attr("bmsSlave1.fullCap", ATTR_FULL_CAPACITY, 0)
-                .attr("bmsSlave1.remainCap", ATTR_REMAIN_CAPACITY, 0),
-
-            TempSensorEntity(client, "bmsSlave1.temp", const.SLAVE_1_BATTERY_TEMP, False, True),
-            WattsSensorEntity(client, "bmsSlave1.inputWatts", const.SLAVE_1_IN_POWER, False, True),
-            WattsSensorEntity(client, "bmsSlave1.outputWatts", const.SLAVE_1_OUT_POWER, False, True),
-
-            LevelSensorEntity(client, "bmsSlave2.soc", const.SLAVE_2_BATTERY_LEVEL, False, True)
-                .attr("bmsSlave2.designCap", ATTR_DESIGN_CAPACITY, 0)
-                .attr("bmsSlave2.fullCap", ATTR_FULL_CAPACITY, 0)
-                .attr("bmsSlave2.remainCap", ATTR_REMAIN_CAPACITY, 0),
-            TempSensorEntity(client, "bmsSlave2.temp", const.SLAVE_2_BATTERY_TEMP, False, True),
-            WattsSensorEntity(client, "bmsSlave2.inputWatts", const.SLAVE_2_IN_POWER, False, True),
-            WattsSensorEntity(client, "bmsSlave2.outputWatts", const.SLAVE_2_OUT_POWER, False, True),
             StatusSensorEntity(client),
         ]
 
@@ -93,16 +76,16 @@ class DeltaPro(BaseDevice):
             MinBatteryLevelEntity(client, "ems.minDsgSoc", const.MIN_DISCHARGE_LEVEL, 0, 30,
                                   lambda value: {"moduleType": 0, "operateType": "TCP",
                                                  "params": {"id": 51, "minDsgSoc": value}}),
-            MaxBatteryLevelEntity(client, "pd.bpPowerSoc", const.BACKUP_RESERVE_LEVEL, 5, 100,
-                                  lambda value: {"moduleType": 0, "operateType": "TCP",
-                                                 "params": {"isConfig": 1, "bpPowerSoc": int(value), "minDsgSoc": 0, "maxChgSoc": 0, "id": 94}}),
-            MinGenStartLevelEntity(client, "ems.minOpenOilEbSoc", const.GEN_AUTO_START_LEVEL, 0, 30,
-                                   lambda value: {"moduleType": 0, "operateType": "TCP",
-                                                  "params": {"openOilSoc": value, "id": 52}}),
-
-            MaxGenStopLevelEntity(client, "ems.maxCloseOilEbSoc", const.GEN_AUTO_STOP_LEVEL, 50, 100,
-                                  lambda value: {"moduleType": 0, "operateType": "TCP",
-                                                 "params": {"closeOilSoc": value, "id": 53}}),
+            # MaxBatteryLevelEntity(client, "pd.bpPowerSoc", const.BACKUP_RESERVE_LEVEL, 5, 100,
+            #                       lambda value: {"moduleType": 0, "operateType": "TCP",
+            #                                      "params": {"isConfig": 1, "bpPowerSoc": int(value), "minDsgSoc": 0, "maxChgSoc": 0, "id": 94}}),
+            # MinGenStartLevelEntity(client, "ems.minOpenOilEbSoc", const.GEN_AUTO_START_LEVEL, 0, 30,
+            #                        lambda value: {"moduleType": 0, "operateType": "TCP",
+            #                                       "params": {"openOilSoc": value, "id": 52}}),
+            #
+            # MaxGenStopLevelEntity(client, "ems.maxCloseOilEbSoc", const.GEN_AUTO_STOP_LEVEL, 50, 100,
+            #                       lambda value: {"moduleType": 0, "operateType": "TCP",
+            #                                      "params": {"closeOilSoc": value, "id": 53}}),
 
             ChargingPowerEntity(client, "inv.cfgSlowChgWatts", const.AC_CHARGING_POWER, 200, 2900,
                                 lambda value: {"moduleType": 0, "operateType": "TCP",
@@ -123,13 +106,11 @@ class DeltaPro(BaseDevice):
 
             EnabledEntity(client, "inv.cfgAcXboost", const.XBOOST_ENABLED,
                           lambda value: {"moduleType": 0, "operateType": "TCP", "params": {"id": 66, "xboost": value}}),
-            EnabledEntity(client, "pd.acautooutConfig", const.AC_ALWAYS_ENABLED,
-                          lambda value: {"moduleType": 0, "operateType": "TCP", "params": {"id": 95, "acautooutConfig": value}}),
-            EnabledEntity(client, "pd.bppowerSoc", const.BP_ENABLED,
-                          lambda value, params: {"moduleType": 0, "operateType": "TCP", "params": {"id": 94, "isConfig": value, 
-                                                            "bpPowerSoc": int(params["pd.bppowerSoc"]),
-                                                            "minDsgSoc": 0,
-                                                            "maxChgSoc": 0}}),
+
+            # EnabledEntity(client, "inv.acPassByAutoEn", const.AC_ALWAYS_ENABLED,
+            #               lambda value: {"moduleType": 0, "operateType": "TCP", "params": {"id": 84, "enabled": value}}),
+            # EnabledEntity(client, "pd.bpPowerSoc", const.BP_ENABLED,
+            #               lambda value: {"moduleType": 0, "operateType": "TCP", "params": {"isConfig": value}}),
         ]
 
     def selects(self, client: EcoflowMQTTClient) -> list[BaseSelectEntity]:

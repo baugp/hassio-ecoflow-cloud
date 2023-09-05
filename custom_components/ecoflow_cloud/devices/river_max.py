@@ -1,23 +1,34 @@
 from . import const, BaseDevice
+from .const import ATTR_DESIGN_CAPACITY, ATTR_FULL_CAPACITY, ATTR_REMAIN_CAPACITY
 from ..entities import BaseSensorEntity, BaseNumberEntity, BaseSwitchEntity, BaseSelectEntity
 from ..mqtt.ecoflow_mqtt import EcoflowMQTTClient
 from ..number import MaxBatteryLevelEntity
 from ..select import DictSelectEntity
 from ..sensor import LevelSensorEntity, WattsSensorEntity, RemainSensorEntity, TempSensorEntity, \
-    CyclesSensorEntity, InWattsSensorEntity, OutWattsSensorEntity, VoltSensorEntity, StatusSensorEntity, InEnergySensorEntity, OutEnergySensorEntity
+    CyclesSensorEntity, InWattsSensorEntity, OutWattsSensorEntity, VoltSensorEntity, StatusSensorEntity, \
+    InEnergySensorEntity, OutEnergySensorEntity, MilliVoltSensorEntity, InMilliVoltSensorEntity, \
+    OutMilliVoltSensorEntity
 from ..switch import EnabledEntity, BeeperEntity
 
 
 class RiverMax(BaseDevice):
     def sensors(self, client: EcoflowMQTTClient) -> list[BaseSensorEntity]:
         return [
-            LevelSensorEntity(client, "pd.soc", const.MAIN_BATTERY_LEVEL),
+            LevelSensorEntity(client, "pd.soc", const.MAIN_BATTERY_LEVEL)
+                .attr("bmsMaster.designCap", ATTR_DESIGN_CAPACITY, 0)
+                .attr("bmsMaster.fullCap", ATTR_FULL_CAPACITY, 0)
+                .attr("bmsMaster.remainCap", ATTR_REMAIN_CAPACITY, 0),
+
+
             WattsSensorEntity(client, "pd.wattsInSum", const.TOTAL_IN_POWER),
             WattsSensorEntity(client, "pd.wattsOutSum", const.TOTAL_OUT_POWER),
 
-            InWattsSensorEntity(client, "inv.inputWatts", const.SOLAR_IN_POWER),
-
+            InWattsSensorEntity(client, "inv.inputWatts", const.AC_IN_POWER),
             OutWattsSensorEntity(client, "inv.outputWatts", const.AC_OUT_POWER),
+
+            InMilliVoltSensorEntity(client, "inv.acInVol", const.AC_IN_VOLT),
+            OutMilliVoltSensorEntity(client, "inv.invOutVol", const.AC_OUT_VOLT),
+
             OutWattsSensorEntity(client, "pd.carWatts", const.DC_OUT_POWER),
 
             OutWattsSensorEntity(client, "pd.typecWatts", const.TYPEC_OUT_POWER),
@@ -33,9 +44,9 @@ class RiverMax(BaseDevice):
             TempSensorEntity(client, "bmsMaster.minCellTemp", const.MIN_CELL_TEMP, False),
             TempSensorEntity(client, "bmsMaster.maxCellTemp", const.MAX_CELL_TEMP, False),
 
-            VoltSensorEntity(client, "bmsMaster.vol", const.BATTERY_VOLT, False),
-            VoltSensorEntity(client, "bmsMaster.minCellVol", const.MIN_CELL_VOLT, False),
-            VoltSensorEntity(client, "bmsMaster.maxCellVol", const.MAX_CELL_VOLT, False),
+            MilliVoltSensorEntity(client, "bmsMaster.vol", const.BATTERY_VOLT, False),
+            MilliVoltSensorEntity(client, "bmsMaster.minCellVol", const.MIN_CELL_VOLT, False),
+            MilliVoltSensorEntity(client, "bmsMaster.maxCellVol", const.MAX_CELL_VOLT, False),
 
             # https://github.com/tolwi/hassio-ecoflow-cloud/discussions/87
             InEnergySensorEntity(client, "pd.chgSunPower", const.SOLAR_IN_ENERGY),
@@ -44,15 +55,18 @@ class RiverMax(BaseDevice):
             OutEnergySensorEntity(client, "pd.dsgPowerAC", const.DISCHARGE_AC_ENERGY),
             OutEnergySensorEntity(client, "pd.dsgPowerDC", const.DISCHARGE_DC_ENERGY),
 
-            LevelSensorEntity(client, "bmsSlave1.soc", const.SLAVE_BATTERY_LEVEL, False, True),
+            LevelSensorEntity(client, "bmsSlave1.soc", const.SLAVE_BATTERY_LEVEL, False, True)
+                .attr("bmsSlave1.designCap", ATTR_DESIGN_CAPACITY, 0)
+                .attr("bmsSlave1.fullCap", ATTR_FULL_CAPACITY, 0)
+                .attr("bmsSlave1.remainCap", ATTR_REMAIN_CAPACITY, 0),
 
             TempSensorEntity(client, "bmsSlave1.temp", const.SLAVE_BATTERY_TEMP, False, True),
             TempSensorEntity(client, "bmsSlave1.minCellTemp", const.SLAVE_MIN_CELL_TEMP, False),
             TempSensorEntity(client, "bmsSlave1.maxCellTemp", const.SLAVE_MAX_CELL_TEMP, False),
 
-            VoltSensorEntity(client, "bmsSlave1.vol", const.BATTERY_VOLT, False),
-            VoltSensorEntity(client, "bmsSlave1.minCellVol", const.MIN_CELL_VOLT, False),
-            VoltSensorEntity(client, "bmsSlave1.maxCellVol", const.MAX_CELL_VOLT, False),
+            MilliVoltSensorEntity(client, "bmsSlave1.vol", const.BATTERY_VOLT, False),
+            MilliVoltSensorEntity(client, "bmsSlave1.minCellVol", const.MIN_CELL_VOLT, False),
+            MilliVoltSensorEntity(client, "bmsSlave1.maxCellVol", const.MAX_CELL_VOLT, False),
 
             CyclesSensorEntity(client, "bmsSlave1.cycles", const.SLAVE_CYCLES, False, True),
             StatusSensorEntity(client),

@@ -1,11 +1,13 @@
 from . import const, BaseDevice
+from .const import ATTR_DESIGN_CAPACITY, ATTR_FULL_CAPACITY, ATTR_REMAIN_CAPACITY, BATTERY_CHARGING_STATE
 from ..entities import BaseSensorEntity, BaseNumberEntity, BaseSwitchEntity, BaseSelectEntity
 from ..mqtt.ecoflow_mqtt import EcoflowMQTTClient
 from ..number import ChargingPowerEntity, MaxBatteryLevelEntity, MinBatteryLevelEntity, BatteryBackupLevel
 from ..select import DictSelectEntity, TimeoutDictSelectEntity
 from ..sensor import LevelSensorEntity, RemainSensorEntity, TempSensorEntity, \
     CyclesSensorEntity, InWattsSensorEntity, OutWattsSensorEntity, VoltSensorEntity, InAmpSensorEntity, \
-    InVoltSensorEntity, QuotasStatusSensorEntity
+    InVoltSensorEntity, QuotasStatusSensorEntity, MilliVoltSensorEntity, InMilliVoltSensorEntity, \
+    OutMilliVoltSensorEntity, ChargingBinarySensorEntity
 from ..switch import EnabledEntity
 
 
@@ -16,7 +18,13 @@ class River2Max(BaseDevice):
 
     def sensors(self, client: EcoflowMQTTClient) -> list[BaseSensorEntity]:
         return [
-            LevelSensorEntity(client, "pd.soc", const.MAIN_BATTERY_LEVEL),
+            LevelSensorEntity(client, "pd.soc", const.MAIN_BATTERY_LEVEL)
+                .attr("bms_bmsStatus.designCap", ATTR_DESIGN_CAPACITY, 0)
+                .attr("bms_bmsStatus.fullCap", ATTR_FULL_CAPACITY, 0)
+                .attr("bms_bmsStatus.remainCap", ATTR_REMAIN_CAPACITY, 0),
+
+            ChargingBinarySensorEntity(client, "bms_emsStatus.chgState", BATTERY_CHARGING_STATE),
+
             InWattsSensorEntity(client, "pd.wattsInSum", const.TOTAL_IN_POWER),
             OutWattsSensorEntity(client, "pd.wattsOutSum", const.TOTAL_OUT_POWER),
 
@@ -24,10 +32,15 @@ class River2Max(BaseDevice):
             InVoltSensorEntity(client, "inv.dcInVol", const.SOLAR_IN_VOLTAGE),
 
             InWattsSensorEntity(client, "inv.inputWatts", const.AC_IN_POWER),
+            OutWattsSensorEntity(client, "inv.outputWatts", const.AC_OUT_POWER),
+
+            InMilliVoltSensorEntity(client, "inv.acInVol", const.AC_IN_VOLT),
+            OutMilliVoltSensorEntity(client, "inv.invOutVol", const.AC_OUT_VOLT),
+
             InWattsSensorEntity(client, "pd.typecChaWatts", const.TYPE_C_IN_POWER),
             InWattsSensorEntity(client, "mppt.inWatts", const.SOLAR_IN_POWER),
 
-            OutWattsSensorEntity(client, "inv.outputWatts", const.AC_OUT_POWER),
+
             OutWattsSensorEntity(client, "pd.carWatts", const.DC_OUT_POWER),
             OutWattsSensorEntity(client, "pd.typec1Watts", const.TYPEC_OUT_POWER),
             OutWattsSensorEntity(client, "pd.usb1Watts", const.USB_OUT_POWER),
@@ -45,8 +58,8 @@ class River2Max(BaseDevice):
             TempSensorEntity(client, "bms_bmsStatus.maxCellTemp", const.MAX_CELL_TEMP, False),
 
             VoltSensorEntity(client, "bms_bmsStatus.vol", const.BATTERY_VOLT, False),
-            VoltSensorEntity(client, "bms_bmsStatus.minCellVol", const.MIN_CELL_VOLT, False),
-            VoltSensorEntity(client, "bms_bmsStatus.maxCellVol", const.MAX_CELL_VOLT, False),
+            MilliVoltSensorEntity(client, "bms_bmsStatus.minCellVol", const.MIN_CELL_VOLT, False),
+            MilliVoltSensorEntity(client, "bms_bmsStatus.maxCellVol", const.MAX_CELL_VOLT, False),
 
             QuotasStatusSensorEntity(client),
             # FanSensorEntity(client, "bms_emsStatus.fanLevel", "Fan Level"),
@@ -86,7 +99,7 @@ class River2Max(BaseDevice):
             EnabledEntity(client, "pd.acAutoOutConfig", const.AC_ALWAYS_ENABLED,
                           lambda value, params: {"moduleType": 1, "operateType": "acAutoOutConfig",
                                                  "params": {"acAutoOutConfig": value,
-                                                            "minAcOutSoc": int(params["bms_emsStatus.minDsgSoc"]) + 5}}
+                                                            "minAcOutSoc": int(params.get("bms_emsStatus.minDsgSoc", 0)) + 5}}
                           ),
 
             EnabledEntity(client, "mppt.cfgAcXboost", const.XBOOST_ENABLED,
@@ -100,7 +113,7 @@ class River2Max(BaseDevice):
             EnabledEntity(client, "pd.bpPowerSoc", const.BP_ENABLED,
                           lambda value, params: {"moduleType": 1, "operateType": "watthConfig",
                                                  "params": {"isConfig": int(value),
-                                                            "bpPowerSoc": int(params["pd.bpPowerSoc"]),
+                                                            "bpPowerSoc": int(params.get("pd.bpPowerSoc", 0)),
                                                             "minDsgSoc": 0,
                                                             "minChgSoc": 0}})
         ]

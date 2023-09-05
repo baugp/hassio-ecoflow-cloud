@@ -3,6 +3,7 @@ import logging
 from datetime import timedelta, datetime
 from typing import Any, Mapping, OrderedDict
 
+from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorDeviceClass
 from homeassistant.components.sensor import (SensorDeviceClass, SensorStateClass, SensorEntity)
 from homeassistant.config_entries import ConfigEntry
 
@@ -19,7 +20,7 @@ from homeassistant.util.dt import UTC
 
 from . import DOMAIN, ATTR_STATUS_SN, ATTR_STATUS_DATA_LAST_UPDATE, ATTR_STATUS_UPDATES, \
     ATTR_STATUS_LAST_UPDATE, ATTR_STATUS_RECONNECTS, ATTR_STATUS_PHASE
-from .entities import BaseSensorEntity, EcoFlowAbstractEntity
+from .entities import BaseSensorEntity, EcoFlowAbstractEntity, EcoFlowDictEntity
 from .mqtt.ecoflow_mqtt import EcoflowMQTTClient
 
 _LOGGER = logging.getLogger(__name__)
@@ -30,6 +31,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     from .devices.registry import devices
     async_add_entities(devices[client.device_type].sensors(client))
+
+
+class MiscBinarySensorEntity(BinarySensorEntity, EcoFlowDictEntity):
+
+    def _update_value(self, val: Any) -> bool:
+        self._attr_is_on = bool(val)
+        return True
+
+
+class ChargingBinarySensorEntity(MiscBinarySensorEntity):
+    _attr_icon = "mdi:battery-charging"
+    _attr_device_class = BinarySensorDeviceClass.BATTERY_CHARGING
 
 
 class CyclesSensorEntity(BaseSensorEntity):
@@ -83,12 +96,29 @@ class DecicelsiusSensorEntity(TempSensorEntity):
 class VoltSensorEntity(BaseSensorEntity):
     _attr_device_class = SensorDeviceClass.VOLTAGE
     _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_native_unit_of_measurement = UnitOfElectricPotential.MILLIVOLT
+    _attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_value = 0
 
-class VOLTSensorEntity(VoltSensorEntity):
-    _attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
+
+class MilliVoltSensorEntity(BaseSensorEntity):
+    _attr_device_class = SensorDeviceClass.VOLTAGE
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_native_unit_of_measurement = UnitOfElectricPotential.MILLIVOLT
+    _attr_suggested_unit_of_measurement = UnitOfElectricPotential.VOLT
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_value = 3
+
+
+class InMilliVoltSensorEntity(MilliVoltSensorEntity):
+    _attr_icon = "mdi:transmission-tower-import"
+    _attr_suggested_display_precision = 0
+
+
+class OutMilliVoltSensorEntity(MilliVoltSensorEntity):
+    _attr_icon = "mdi:transmission-tower-export"
+    _attr_suggested_display_precision = 0
+
 
 class DecivoltSensorEntity(BaseSensorEntity):
     _attr_device_class = SensorDeviceClass.VOLTAGE
@@ -126,6 +156,7 @@ class DeciampSensorEntity(BaseSensorEntity):
 
 
 class WattsSensorEntity(BaseSensorEntity):
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_device_class = SensorDeviceClass.POWER
     _attr_native_unit_of_measurement = UnitOfPower.WATT
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -136,7 +167,12 @@ class EnergySensorEntity(BaseSensorEntity):
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.WATT_HOUR
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
-    _attr_native_value = 0
+    def _update_value(self, val: Any) -> bool:
+        ival = int(val)
+        if ival > 0:
+          return super()._update_value(ival)
+        else:
+          return False
 
 
 class DeciwattsSensorEntity(WattsSensorEntity):
@@ -158,11 +194,14 @@ class InWattsSolarSensorEntity(InWattsSensorEntity):
 class OutWattsSensorEntity(WattsSensorEntity):
     _attr_icon = "mdi:transmission-tower-export"
 
+
 class OutWattsDcSensorEntity(WattsSensorEntity):
     _attr_icon = "mdi:transmission-tower-export"
+
     def _update_value(self, val: Any) -> bool:
         return super()._update_value(int(val) / 10)
-    
+
+
 class InVoltSensorEntity(VoltSensorEntity):
     _attr_icon = "mdi:transmission-tower-import"
 

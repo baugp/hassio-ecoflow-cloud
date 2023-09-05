@@ -1,12 +1,13 @@
 from . import const, BaseDevice
+from .const import ATTR_DESIGN_CAPACITY, ATTR_FULL_CAPACITY, ATTR_REMAIN_CAPACITY, BATTERY_CHARGING_STATE
 from ..entities import BaseSensorEntity, BaseNumberEntity, BaseSwitchEntity, BaseSelectEntity
 from ..mqtt.ecoflow_mqtt import EcoflowMQTTClient
 from ..number import ChargingPowerEntity, MaxBatteryLevelEntity, MinBatteryLevelEntity
 from ..select import DictSelectEntity, TimeoutDictSelectEntity
 from ..sensor import LevelSensorEntity, RemainSensorEntity, TempSensorEntity, \
     CyclesSensorEntity, InWattsSensorEntity, OutWattsSensorEntity, VoltSensorEntity, StatusSensorEntity, \
-    VOLTSensorEntity, InVoltSensorEntity, OutVoltSensorEntity, InAmpSensorEntity, \
-    OutAmpSensorEntity
+    MilliVoltSensorEntity, InMilliVoltSensorEntity, OutMilliVoltSensorEntity, ChargingBinarySensorEntity, \
+    InVoltSensorEntity, OutVoltSensorEntity, InAmpSensorEntity, OutAmpSensorEntity
 from ..switch import EnabledEntity
 
 
@@ -16,15 +17,25 @@ class River2(BaseDevice):
 
     def sensors(self, client: EcoflowMQTTClient) -> list[BaseSensorEntity]:
         return [
-            LevelSensorEntity(client, "pd.soc", const.MAIN_BATTERY_LEVEL),
+            LevelSensorEntity(client, "pd.soc", const.MAIN_BATTERY_LEVEL)
+                .attr("bms_bmsStatus.designCap", ATTR_DESIGN_CAPACITY, 0)
+                .attr("bms_bmsStatus.fullCap", ATTR_FULL_CAPACITY, 0)
+                .attr("bms_bmsStatus.remainCap", ATTR_REMAIN_CAPACITY, 0),
+
+            ChargingBinarySensorEntity(client, "bms_emsStatus.chgState", BATTERY_CHARGING_STATE),
+
             InWattsSensorEntity(client, "pd.wattsInSum", const.TOTAL_IN_POWER),
             OutWattsSensorEntity(client, "pd.wattsOutSum", const.TOTAL_OUT_POWER),
 
             InWattsSensorEntity(client, "inv.inputWatts", const.AC_IN_POWER),
+            OutWattsSensorEntity(client, "inv.outputWatts", const.AC_OUT_POWER),
+
+            InMilliVoltSensorEntity(client, "inv.acInVol", const.AC_IN_VOLT),
+            OutMilliVoltSensorEntity(client, "inv.invOutVol", const.AC_OUT_VOLT),
+
             InWattsSensorEntity(client, "pd.typecChaWatts", const.TYPE_C_IN_POWER),
             InWattsSensorEntity(client, "mppt.inWatts", const.SOLAR_IN_POWER),
 
-            OutWattsSensorEntity(client, "inv.outputWatts", const.AC_OUT_POWER),
             OutWattsSensorEntity(client, "pd.carWatts", const.DC_OUT_POWER),
             OutWattsSensorEntity(client, "pd.typec1Watts", const.TYPEC_1_OUT_POWER),
 
@@ -41,20 +52,18 @@ class River2(BaseDevice):
             TempSensorEntity(client, "bms_bmsStatus.minCellTemp", const.MIN_CELL_TEMP, False),
             TempSensorEntity(client, "bms_bmsStatus.maxCellTemp", const.MAX_CELL_TEMP, False),
 
-            VOLTSensorEntity(client, "bms_bmsStatus.vol", const.BATTERY_VOLT, False),
-            VoltSensorEntity(client, "bms_bmsStatus.minCellVol", const.MIN_CELL_VOLT, False),
-            VoltSensorEntity(client, "bms_bmsStatus.maxCellVol", const.MAX_CELL_VOLT, False),
+            VoltSensorEntity(client, "bms_bmsStatus.vol", const.BATTERY_VOLT, False),
+            MilliVoltSensorEntity(client, "bms_bmsStatus.minCellVol", const.MIN_CELL_VOLT, False),
+            MilliVoltSensorEntity(client, "bms_bmsStatus.maxCellVol", const.MAX_CELL_VOLT, False),
 
             # FanSensorEntity(client, "bms_emsStatus.fanLevel", "Fan Level"),
             StatusSensorEntity(client),
             
-            InVoltSensorEntity(client, "inv.acInVol", const.AC_IN_VOLT, False),
             InAmpSensorEntity(client, "inv.acInAmp", const.AC_IN_AMP, False),
-            OutVoltSensorEntity(client, "inv.invOutVol", const.AC_OUT_VOLT, False),
             OutAmpSensorEntity(client, "inv.invOutAmp", const.AC_OUT_AMP, False),
-            InVoltSensorEntity(client, "mppt.inVol", const.DC_IN_VOLT, False),
+            InMilliVoltSensorEntity(client, "mppt.inVol", const.DC_IN_VOLT, False),
             InAmpSensorEntity(client, "mppt.inAmp", const.DC_IN_AMP, False),
-            VoltSensorEntity(client, "mppt.outVol", const.MPPT_OUT_VOLT, False),
+            OutMilliVoltSensorEntity(client, "mppt.outVol", const.MPPT_OUT_VOLT, False),
 
         ]
 
